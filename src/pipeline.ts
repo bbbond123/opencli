@@ -143,7 +143,15 @@ async function executeStep(page: any, op: string, params: any, data: any, args: 
     }
     case 'evaluate': {
       const js = String(render(params, { args, data }));
-      return page.evaluate(normalizeEvaluateSource(js));
+      let result = await page.evaluate(normalizeEvaluateSource(js));
+      // MCP may return JSON as a string — auto-parse it
+      if (typeof result === 'string') {
+        const trimmed = result.trim();
+        if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+          try { result = JSON.parse(trimmed); } catch {}
+        }
+      }
+      return result;
     }
     case 'snapshot': {
       const opts = (typeof params === 'object' && params) ? params : {};

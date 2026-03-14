@@ -2,6 +2,8 @@ site: v2ex
 name: hot
 description: V2EX 热门话题
 domain: www.v2ex.com
+strategy: public
+browser: false
 
 args:
   limit:
@@ -10,20 +12,14 @@ args:
     description: Number of topics
 
 pipeline:
-  - evaluate: |
-      (async () => {
-        const res = await fetch('https://www.v2ex.com/api/topics/hot.json');
-        return await res.json();
-      })()
+  - fetch:
+      url: https://www.v2ex.com/api/topics/hot.json
 
   - map:
       rank: ${{ index + 1 }}
       title: ${{ item.title }}
-      node: ${{ item.node?.title }}
-      author: ${{ item.member?.username }}
       replies: ${{ item.replies }}
-      url: ${{ item.url }}
 
   - limit: ${{ args.limit }}
 
-columns: [rank, title, node, author, replies]
+columns: [rank, title, replies]

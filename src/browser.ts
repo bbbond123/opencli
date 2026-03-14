@@ -36,7 +36,18 @@ export class Page {
     if (result?.content) {
       const textParts = result.content.filter((c: any) => c.type === 'text');
       if (textParts.length === 1) {
-        const text = textParts[0].text;
+        let text = textParts[0].text;
+        // MCP browser_evaluate returns: "[JSON]\n### Ran Playwright code\n```js\n...\n```"
+        // Strip the "### Ran Playwright code" suffix to get clean JSON
+        const codeMarker = text.indexOf('### Ran Playwright code');
+        if (codeMarker !== -1) {
+          text = text.slice(0, codeMarker).trim();
+        }
+        // Also handle "### Result\n[JSON]" format (some MCP versions)
+        const resultMarker = text.indexOf('### Result\n');
+        if (resultMarker !== -1) {
+          text = text.slice(resultMarker + '### Result\n'.length).trim();
+        }
         try { return JSON.parse(text); } catch { return text; }
       }
     }
@@ -115,6 +126,8 @@ export class PlaywrightMCP {
   private _lockAcquired = false;
   private _initialTabCount = 0;
 
+  private _page: Page | null = null;
+
   async connect(opts: { timeout?: number } = {}): Promise<Page> {
     await this._acquireLock();
     const timeout = opts.timeout ?? CONNECT_TIMEOUT;
@@ -137,6 +150,7 @@ export class PlaywrightMCP {
         (msg) => { if (this._proc?.stdin?.writable) this._proc.stdin.write(msg); },
         () => new Promise<any>((res) => { this._waiters.push(res); }),
       );
+      this._page = page;
 
       this._proc.stdout?.on('data', (chunk: Buffer) => {
         this._buffer += chunk.toString();
@@ -185,11 +199,29 @@ export class PlaywrightMCP {
 
   async close(): Promise<void> {
     try {
+      // Close extension tab(s) opened during this session
+      if (this._page && this._proc && !this._proc.killed) {
+        try {
+          const tabs = await this._page.tabs();
+          const tabStr = typeof tabs === 'string' ? tabs : JSON.stringify(tabs);
+          // Find and close chrome-extension:// tabs (opened by MCP Bridge)
+          const tabMatches = tabStr.match(/Tab (\d+).*?chrome-extension:\/\//g);
+          if (tabMatches) {
+            for (const match of tabMatches) {
+              const idx = match.match(/Tab (\d+)/)?.[1];
+              if (idx) {
+                try { await this._page.closeTab(parseInt(idx)); } catch {}
+              }
+            }
+          }
+        } catch {}
+      }
       if (this._proc && !this._proc.killed) {
         this._proc.kill('SIGTERM');
         await new Promise<void>((res) => { this._proc?.on('exit', () => res()); setTimeout(res, 3000); });
       }
     } finally {
+      this._page = null;
       this._releaseLock();
     }
   }
