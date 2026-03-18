@@ -149,7 +149,16 @@ npm install -g @jackwener/opencli@latest
 |------|----------|:-----:|------|
 | **twitter** | `trending` `bookmarks` `profile` `search` `timeline` `thread` `following` `followers` `notifications` `post` `reply` `delete` `like` `article` `follow` `unfollow` `bookmark` `unbookmark` | 18 | 🔐 Browser |
 | **reddit** | `hot` `frontpage` `popular` `search` `subreddit` `read` `user` `user-posts` `user-comments` `upvote` `save` `comment` `subscribe` `saved` `upvoted` | 15 | 🔐 Browser |
+| **antigravity** | `status` `send` `read` `new` `evaluate` | 5 | 🖥️ Desktop |
+| **bbc** | `news` | 1 | 🌐 Public |
 | **bilibili** | `hot` `search` `me` `favorite` `history` `feed` `subtitle` `dynamic` `ranking` `following` `user-videos` | 11 | 🔐 Browser |
+| **boss** | `search` `detail` | 2 | 🔐 Browser |
+| **codex** | `status` `send` `read` `new` `extract-diff` `model` | 6 | 🖥️ Desktop |
+| **coupang** | `search` `add-to-cart` | 2 | 🔐 Browser |
+| **ctrip** | `search` | 1 | 🔐 Browser |
+| **cursor** | `status` `send` `read` `new` `dump` `composer` `model` | 7 | 🖥️ Desktop |
+| **github** | `search` | 1 | 🌐 Public |
+| **hackernews** | `top` | 1 | 🌐 Public |
 | **v2ex** | `hot` `latest` `topic` `daily` `me` `notifications` | 6 | 🌐 / 🔐 |
 | **xueqiu** | `feed` `hot-stock` `hot` `search` `stock` `watchlist` | 6 | 🔐 Browser |
 | **xiaohongshu** | `search` `notifications` `feed` `me` `user` | 5 | 🔐 Browser |

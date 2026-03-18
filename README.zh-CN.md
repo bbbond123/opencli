@@ -150,6 +150,9 @@ npm install -g @jackwener/opencli@latest
 |------|------|:----:|------|
 | **twitter** | `trending` `bookmarks` `profile` `search` `timeline` `thread` `following` `followers` `notifications` `post` `reply` `delete` `like` `article` `follow` `unfollow` `bookmark` `unbookmark` | 18 | 🔐 浏览器 |
 | **reddit** | `hot` `frontpage` `popular` `search` `subreddit` `read` `user` `user-posts` `user-comments` `upvote` `save` `comment` `subscribe` `saved` `upvoted` | 15 | 🔐 浏览器 |
+| **antigravity** | `status` `send` `read` `new` `evaluate` | 5 | 🖥️ 桌面端 |
+| **codex** | `status` `send` `read` `new` `extract-diff` `model` | 6 | 🖥️ 桌面端 |
+| **cursor** | `status` `send` `read` `new` `dump` `composer` `model` | 7 | 🖥️ 桌面端 |
 | **bilibili** | `hot` `search` `me` `favorite` `history` `feed` `subtitle` `dynamic` `ranking` `following` `user-videos` | 11 | 🔐 浏览器 |
 | **v2ex** | `hot` `latest` `topic` `daily` `me` `notifications` | 6 | 🌐 / 🔐 |
 | **xueqiu** | `feed` `hot-stock` `hot` `search` `stock` `watchlist` | 6 | 🔐 浏览器 |
