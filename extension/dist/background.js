@@ -228,7 +228,7 @@ async function getAutomationWindow(workspace) {
 	const session = {
 		windowId: (await chrome.windows.create({
 			url: "data:text/html,<html></html>",
-			focused: false,
+			focused: true,
 			width: 1280,
 			height: 900,
 			type: "normal"

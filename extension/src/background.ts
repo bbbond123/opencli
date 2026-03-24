@@ -139,7 +139,7 @@ async function getAutomationWindow(workspace: string): Promise<number> {
   // Using about:blank would be hijacked by extensions like "New Tab Override".
   const win = await chrome.windows.create({
     url: 'data:text/html,<html></html>',
-    focused: false,
+    focused: true,
     width: 1280,
     height: 900,
     type: 'normal',
