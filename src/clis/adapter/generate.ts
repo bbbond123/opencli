@@ -80,6 +80,7 @@ cli({
   description: 'Auto-generate adapters for a website using OpenAI',
   strategy: Strategy.PUBLIC,
   browser: true,
+  timeoutSeconds: 300,
   args: [
     { name: 'url', required: true, positional: true, help: 'Website URL to generate adapters for' },
     { name: 'goal', required: false, help: 'Hint: what you want to do on this site' },

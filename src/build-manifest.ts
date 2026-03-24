@@ -283,6 +283,10 @@ export function scanTs(filePath: string, site: string): ManifestEntry | null {
       entry.args = parseTsArgsBlock(argsBlock);
     }
 
+    // Extract timeoutSeconds
+    const timeoutMatch = src.match(/timeoutSeconds\s*:\s*(\d+)/);
+    if (timeoutMatch) entry.timeout = parseInt(timeoutMatch[1], 10);
+
     // Extract navigateBefore: false
     const navMatch = src.match(/navigateBefore\s*:\s*(true|false)/);
     if (navMatch) entry.navigateBefore = navMatch[1] === 'true' ? true : false;

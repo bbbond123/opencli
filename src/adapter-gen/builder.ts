@@ -32,7 +32,6 @@ export function buildPlugin(
   const pluginDir = path.join(PLUGINS_DIR, pluginName);
 
   fs.mkdirSync(path.join(pluginDir, 'src'), { recursive: true });
-  fs.mkdirSync(path.join(pluginDir, 'dist'), { recursive: true });
 
   const pkg = {
     name: `opencli-plugin-${pluginName}`,
@@ -60,12 +59,14 @@ export function buildPlugin(
     fs.symlinkSync(hostRoot, symlinkTarget, 'dir');
   }
 
-  // Compile TS → JS with esbuild
+  // Compile TS → JS with esbuild (use host project's esbuild)
+  const hostRoot = path.resolve(import.meta.dirname, '..', '..');
+  const esbuildBin = path.join(hostRoot, 'node_modules', '.bin', 'esbuild');
   for (const adapter of adapters) {
     const tsFile = path.join(pluginDir, 'src', `${adapter.commandName}.ts`);
-    const jsFile = path.join(pluginDir, 'dist', `${adapter.commandName}.js`);
+    const jsFile = path.join(pluginDir, `${adapter.commandName}.js`);
     execSync(
-      `npx esbuild "${tsFile}" --outfile="${jsFile}" --format=esm --platform=node --external:@jackwener/opencli`,
+      `"${esbuildBin}" "${tsFile}" --bundle --outfile="${jsFile}" --format=esm --platform=node --external:@jackwener/opencli`,
       { cwd: pluginDir, stdio: 'pipe' }
     );
   }
