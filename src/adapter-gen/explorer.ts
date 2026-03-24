@@ -17,12 +17,12 @@ export async function exploreSite(url: string): Promise<SiteSnapshot> {
   await page.goto(url, { settleMs: 3000 });
   await page.wait(3);
 
-  const meta: { title: string; description: string } = await page.evaluate(`
+  const meta = (await page.evaluate(`
     (() => ({
       title: document.title || '',
       description: document.querySelector('meta[name="description"]')?.getAttribute('content') || '',
     }))()
-  `);
+  `)) as { title: string; description: string };
 
   const snap = await page.snapshot({ interactive: true, compact: true, maxDepth: 5 });
 
