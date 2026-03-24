@@ -17,6 +17,59 @@ import type { IPage } from '../../types.js';
 
 type ImagePayload = { name: string; mimeType: string; base64: string };
 
+/**
+ * Convert file content to Twitter-friendly plain text.
+ * Strips markdown syntax, preserves readability.
+ */
+function fileToTweetText(content: string, ext: string): string {
+  let text = content;
+
+  if (ext === '.md' || ext === '.markdown') {
+    // Remove images ![alt](url)
+    text = text.replace(/!\[([^\]]*)\]\([^)]+\)/g, '');
+    // Convert links [text](url) → text (url)
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
+    // Remove headers # → keep text
+    text = text.replace(/^#{1,6}\s+/gm, '');
+    // Bold **text** or __text__ → text
+    text = text.replace(/\*\*([^*]+)\*\*/g, '$1');
+    text = text.replace(/__([^_]+)__/g, '$1');
+    // Italic *text* or _text_ → text
+    text = text.replace(/\*([^*]+)\*/g, '$1');
+    text = text.replace(/(?<!\w)_([^_]+)_(?!\w)/g, '$1');
+    // Inline code `text` → text
+    text = text.replace(/`([^`]+)`/g, '$1');
+    // Code blocks ```...``` → keep content
+    text = text.replace(/```[\w]*\n?([\s\S]*?)```/g, '$1');
+    // Blockquotes > → remove marker
+    text = text.replace(/^>\s?/gm, '');
+    // Horizontal rules --- or *** → newline
+    text = text.replace(/^[-*_]{3,}\s*$/gm, '');
+    // Unordered lists - item → • item
+    text = text.replace(/^[\s]*[-*+]\s+/gm, '• ');
+    // Ordered lists 1. item → keep
+    text = text.replace(/^[\s]*\d+\.\s+/gm, (m) => m.trimStart());
+    // HTML tags
+    text = text.replace(/<[^>]+>/g, '');
+  } else if (ext === '.html' || ext === '.htm') {
+    // Strip HTML tags
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+    text = text.replace(/<\/p>/gi, '\n\n');
+    text = text.replace(/<[^>]+>/g, '');
+    text = text.replace(/&amp;/g, '&');
+    text = text.replace(/&lt;/g, '<');
+    text = text.replace(/&gt;/g, '>');
+    text = text.replace(/&quot;/g, '"');
+    text = text.replace(/&#39;/g, "'");
+  }
+  // For .txt and other formats, use as-is
+
+  // Clean up: collapse multiple blank lines, trim
+  text = text.replace(/\n{3,}/g, '\n\n').trim();
+
+  return text;
+}
+
 const MIME_MAP: Record<string, string> = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -172,12 +225,26 @@ cli({
   strategy: Strategy.UI,
   browser: true,
   args: [
-    { name: 'text', type: 'string', required: true, positional: true, help: 'The text content of the tweet' },
+    { name: 'text', type: 'string', required: false, positional: true, help: 'The text content of the tweet' },
+    { name: 'file', type: 'string', required: false, help: 'Read tweet text from a file (txt, md, etc.)' },
     { name: 'image', type: 'string', required: false, help: 'Image to attach: local file path or URL' },
   ],
   columns: ['status', 'message', 'text'],
   func: async (page: IPage | null, kwargs: any) => {
     if (!page) throw new Error('Requires browser');
+
+    // Resolve tweet text: --file takes priority, then positional text arg
+    let tweetText: string = kwargs.text || '';
+    if (kwargs.file) {
+      const filePath = path.resolve(String(kwargs.file));
+      if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      const ext = path.extname(filePath).toLowerCase();
+      tweetText = fileToTweetText(raw, ext);
+    }
+    if (!tweetText) {
+      throw new Error('Either provide text or use --file <path>');
+    }
 
     // Resolve image before navigating (fast-fail on bad path/URL)
     let imageData: ImagePayload | null = null;
@@ -196,7 +263,7 @@ cli({
         return [{
           status: 'failed',
           message: `Image injection failed: ${inject.error}`,
-          text: kwargs.text
+          text: tweetText.slice(0, 100)
         }];
       }
 
@@ -206,7 +273,7 @@ cli({
         return [{
           status: 'failed',
           message: 'Image was injected but thumbnail did not appear. Upload may have failed.',
-          text: kwargs.text
+          text: tweetText.slice(0, 100)
         }];
       }
 
@@ -222,7 +289,7 @@ cli({
             if (box) {
                 box.focus();
                 // Simulate a paste event to properly handle newlines in Draft.js/React
-                const textToInsert = ${JSON.stringify(kwargs.text)};
+                const textToInsert = ${JSON.stringify(tweetText)};
                 const dataTransfer = new DataTransfer();
                 dataTransfer.setData('text/plain', textToInsert);
                 box.dispatchEvent(new ClipboardEvent('paste', {
@@ -264,7 +331,7 @@ cli({
     return [{
         status: result.ok ? 'success' : 'failed',
         message: result.message + (imageData ? ' (with image)' : ''),
-        text: kwargs.text
+        text: tweetText.slice(0, 100)
     }];
   }
 });

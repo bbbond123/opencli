@@ -32,6 +32,8 @@ export interface Command {
   quality?: number;
   /** Whether to capture full page (not just viewport) */
   fullPage?: boolean;
+  /** Show automation window in foreground */
+  focused?: boolean;
 }
 
 export interface Result {

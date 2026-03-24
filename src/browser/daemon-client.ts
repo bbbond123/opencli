@@ -29,6 +29,7 @@ export interface DaemonCommand {
   format?: 'png' | 'jpeg';
   quality?: number;
   fullPage?: boolean;
+  focused?: boolean;
 }
 
 export interface DaemonResult {
@@ -87,10 +88,13 @@ export async function sendCommand(
 ): Promise<unknown> {
   const maxRetries = 4;
 
+  // Pass focused flag if OPENCLI_SHOW_BROWSER is set
+  const showBrowser = process.env.OPENCLI_SHOW_BROWSER === 'true' || process.env.OPENCLI_SHOW_BROWSER === '1';
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     // Generate a fresh ID per attempt to avoid daemon-side duplicate detection
     const id = generateId();
-    const command: DaemonCommand = { id, action, ...params };
+    const command: DaemonCommand = { id, action, ...params, ...(showBrowser ? { focused: true } : {}) };
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 30000);

@@ -217,7 +217,7 @@ function resetWindowIdleTimer(workspace) {
 	}, WINDOW_IDLE_TIMEOUT);
 }
 /** Get or create the dedicated automation window. */
-async function getAutomationWindow(workspace) {
+async function getAutomationWindow(workspace, focused = false) {
 	const existing = automationSessions.get(workspace);
 	if (existing) try {
 		await chrome.windows.get(existing.windowId);
@@ -228,7 +228,7 @@ async function getAutomationWindow(workspace) {
 	const session = {
 		windowId: (await chrome.windows.create({
 			url: "data:text/html,<html></html>",
-			focused: true,
+			focused,
 			width: 1280,
 			height: 900,
 			type: "normal"
@@ -303,7 +303,7 @@ function isDebuggableUrl(url) {
 * If explicit tabId is given, use that directly.
 * Otherwise, find or create a tab in the dedicated automation window.
 */
-async function resolveTabId(tabId, workspace) {
+async function resolveTabId(tabId, workspace, focused = false) {
 	if (tabId !== void 0) try {
 		const tab = await chrome.tabs.get(tabId);
 		if (isDebuggableUrl(tab.url)) return tabId;
@@ -311,7 +311,7 @@ async function resolveTabId(tabId, workspace) {
 	} catch {
 		console.warn(`[opencli] Tab ${tabId} no longer exists, re-resolving`);
 	}
-	const windowId = await getAutomationWindow(workspace);
+	const windowId = await getAutomationWindow(workspace, focused);
 	const tabs = await chrome.tabs.query({ windowId });
 	const debuggableTab = tabs.find((t) => t.id && isDebuggableUrl(t.url));
 	if (debuggableTab?.id) return debuggableTab.id;
@@ -352,7 +352,7 @@ async function handleExec(cmd, workspace) {
 		ok: false,
 		error: "Missing code"
 	};
-	const tabId = await resolveTabId(cmd.tabId, workspace);
+	const tabId = await resolveTabId(cmd.tabId, workspace, cmd.focused);
 	try {
 		const data = await evaluateAsync(tabId, cmd.code);
 		return {
@@ -374,7 +374,7 @@ async function handleNavigate(cmd, workspace) {
 		ok: false,
 		error: "Missing url"
 	};
-	const tabId = await resolveTabId(cmd.tabId, workspace);
+	const tabId = await resolveTabId(cmd.tabId, workspace, cmd.focused);
 	const beforeUrl = (await chrome.tabs.get(tabId)).url ?? "";
 	const targetUrl = cmd.url;
 	await detach(tabId);
@@ -436,7 +436,7 @@ async function handleTabs(cmd, workspace) {
 			};
 		}
 		case "new": {
-			const windowId = await getAutomationWindow(workspace);
+			const windowId = await getAutomationWindow(workspace, cmd.focused);
 			const tab = await chrome.tabs.create({
 				windowId,
 				url: cmd.url ?? "data:text/html,<html></html>",
@@ -467,7 +467,7 @@ async function handleTabs(cmd, workspace) {
 					data: { closed: target.id }
 				};
 			}
-			const tabId = await resolveTabId(cmd.tabId, workspace);
+			const tabId = await resolveTabId(cmd.tabId, workspace, cmd.focused);
 			await chrome.tabs.remove(tabId);
 			await detach(tabId);
 			return {
@@ -530,7 +530,7 @@ async function handleCookies(cmd) {
 	};
 }
 async function handleScreenshot(cmd, workspace) {
-	const tabId = await resolveTabId(cmd.tabId, workspace);
+	const tabId = await resolveTabId(cmd.tabId, workspace, cmd.focused);
 	try {
 		const data = await screenshot(tabId, {
 			format: cmd.format,

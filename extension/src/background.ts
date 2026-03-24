@@ -122,7 +122,7 @@ function resetWindowIdleTimer(workspace: string): void {
 }
 
 /** Get or create the dedicated automation window. */
-async function getAutomationWindow(workspace: string): Promise<number> {
+async function getAutomationWindow(workspace: string, focused: boolean = false): Promise<number> {
   // Check if our window is still alive
   const existing = automationSessions.get(workspace);
   if (existing) {
@@ -139,7 +139,7 @@ async function getAutomationWindow(workspace: string): Promise<number> {
   // Using about:blank would be hijacked by extensions like "New Tab Override".
   const win = await chrome.windows.create({
     url: 'data:text/html,<html></html>',
-    focused: true,
+    focused,
     width: 1280,
     height: 900,
     type: 'normal',
@@ -240,7 +240,7 @@ function isDebuggableUrl(url?: string): boolean {
  * If explicit tabId is given, use that directly.
  * Otherwise, find or create a tab in the dedicated automation window.
  */
-async function resolveTabId(tabId: number | undefined, workspace: string): Promise<number> {
+async function resolveTabId(tabId: number | undefined, workspace: string, focused: boolean = false): Promise<number> {
   // Even when an explicit tabId is provided, validate it is still debuggable.
   // This prevents issues when extensions hijack the tab URL to chrome-extension://
   // or when the tab has been closed by the user.
@@ -257,7 +257,7 @@ async function resolveTabId(tabId: number | undefined, workspace: string): Promi
   }
 
   // Get (or create) the automation window
-  const windowId = await getAutomationWindow(workspace);
+  const windowId = await getAutomationWindow(workspace, focused);
 
   // Prefer an existing debuggable tab
   const tabs = await chrome.tabs.query({ windowId });
@@ -303,7 +303,7 @@ async function listAutomationWebTabs(workspace: string): Promise<chrome.tabs.Tab
 
 async function handleExec(cmd: Command, workspace: string): Promise<Result> {
   if (!cmd.code) return { id: cmd.id, ok: false, error: 'Missing code' };
-  const tabId = await resolveTabId(cmd.tabId, workspace);
+  const tabId = await resolveTabId(cmd.tabId, workspace, cmd.focused);
   try {
     const data = await executor.evaluateAsync(tabId, cmd.code);
     return { id: cmd.id, ok: true, data };
@@ -314,7 +314,7 @@ async function handleExec(cmd: Command, workspace: string): Promise<Result> {
 
 async function handleNavigate(cmd: Command, workspace: string): Promise<Result> {
   if (!cmd.url) return { id: cmd.id, ok: false, error: 'Missing url' };
-  const tabId = await resolveTabId(cmd.tabId, workspace);
+  const tabId = await resolveTabId(cmd.tabId, workspace, cmd.focused);
 
   // Capture the current URL before navigation to detect actual URL change
   const beforeTab = await chrome.tabs.get(tabId);
@@ -396,7 +396,7 @@ async function handleTabs(cmd: Command, workspace: string): Promise<Result> {
       return { id: cmd.id, ok: true, data };
     }
     case 'new': {
-      const windowId = await getAutomationWindow(workspace);
+      const windowId = await getAutomationWindow(workspace, cmd.focused);
       const tab = await chrome.tabs.create({ windowId, url: cmd.url ?? 'data:text/html,<html></html>', active: true });
       return { id: cmd.id, ok: true, data: { tabId: tab.id, url: tab.url } };
     }
@@ -409,7 +409,7 @@ async function handleTabs(cmd: Command, workspace: string): Promise<Result> {
         await executor.detach(target.id);
         return { id: cmd.id, ok: true, data: { closed: target.id } };
       }
-      const tabId = await resolveTabId(cmd.tabId, workspace);
+      const tabId = await resolveTabId(cmd.tabId, workspace, cmd.focused);
       await chrome.tabs.remove(tabId);
       await executor.detach(tabId);
       return { id: cmd.id, ok: true, data: { closed: tabId } };
@@ -450,7 +450,7 @@ async function handleCookies(cmd: Command): Promise<Result> {
 }
 
 async function handleScreenshot(cmd: Command, workspace: string): Promise<Result> {
-  const tabId = await resolveTabId(cmd.tabId, workspace);
+  const tabId = await resolveTabId(cmd.tabId, workspace, cmd.focused);
   try {
     const data = await executor.screenshot(tabId, {
       format: cmd.format,
